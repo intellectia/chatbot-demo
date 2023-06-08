@@ -2,8 +2,7 @@
 const scripts = document.getElementsByTagName("script");
 const myScript = scripts[scripts.length - 1];
 const queryString = myScript.src.replace(/^[^?]+\??/, "");
-// eslint-disable-next-line no-undef
-// let markdownToHtml = new showdown.Converter();
+
 let style, client;
 
 if (!queryString) {
@@ -334,7 +333,6 @@ function addMessage(message, isUserMessage, imageUrl) {
     parsedMessage = parseCodeMessage(stripScripts(message)).message;
   } else {
     try {
-      // parsedMessage = markdownToHtml.makeHtml(parseCodeMessage(message).message);
       parsedMessage = markdownToHtmlTable(parseCodeMessage(message).message);
     } catch (error) {
       console.log(error);
