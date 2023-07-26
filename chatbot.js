@@ -1,12 +1,27 @@
-// chatbot.js
-const scripts = document.getElementsByTagName("script");
-const myScript = scripts[scripts.length - 1];
-const queryString = myScript.src.replace(/^[^?]+\??/, "");
+// chatbot.ts
 
-let style, client;
+// interfaces
+interface Metadata {
+  assistantName: string;
+  userName: string;
+  style: string;
+  client: string;
+}
+
+interface Data {
+  url: string;
+  data: string;
+  type: string;
+  base64: string;
+}
+
+const scripts: HTMLCollectionOf<HTMLScriptElement> = document.getElementsByTagName("script");
+const myScript: HTMLScriptElement = scripts[scripts.length - 1];
+const queryString: string = myScript.src.replace(/^[^?]+\??/, "");
+
+let style: string | null, client: string | null;
 
 if (!queryString) {
-  // do nothing
   style = "generic";
   client = "generic";
 } else {
@@ -17,59 +32,63 @@ if (!queryString) {
 console.log("style: ", style);
 console.log("client: ", client);
 
-let metadata = {
+let metadata: Metadata = {
   assistantName: "Assistant",
   userName: "User",
   style: style || "generic",
   client: client || "generic",
 };
 
-const userImageData = {
+const userImageData: Data = {
   url: "",
   data: "",
   type: "",
   base64: "",
 };
 
-const userDocumentData = {
+const userDocumentData: Data = {
   data: "",
   type: "",
   base64: "",
 }
 
-const botImageData = {
+const botImageData: Data = {
   url: "",
   data: "",
   type: "",
   base64: "",
 };
 
+
 // Text with HTML tags other than <a> tags with web links or <br> will be detected as HTML.
-function isHtml(text) {
+function isHtml(text: string): boolean {
   return /<(?:(?:(?:a\s+(?:[^>]*?\bhref\s*=)[^>]*?|[a-z]+\s*\/?>))(?:(?!<\s*\/\s*\1\s*>)[\s\S])*<\s*\/\s*\1\s*>|[a-z][\s\S]*>|br\s*\/?\s*>)/i.test(
       text
   );
 }
 
 // Strip all <script> tags from the message
-function stripScripts(inputText) {
+function stripScripts(inputText: string): string {
     return inputText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 }
 
 // Function to parse the code blocks in the message
-function parseCodeMessage(message) {
-  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
-  const codeBlocks = message.match(codeBlockRegex);
+interface ParseCodeMessageResult {
+  message: string;
+  codeBlocks?: string[];
+}
+
+function parseCodeMessage(message: string): ParseCodeMessageResult {
+  const codeBlockRegex: RegExp = /```(\w+)?\n?([\s\S]*?)```/g;
+  const codeBlocks: RegExpMatchArray | null = message.match(codeBlockRegex);
 
   if (!codeBlocks) {
-    return { message: message };
+    return { message };
   }
 
-  let newMessage = message;
-  codeBlocks.forEach((codeBlock) => {
-    const [, language = "python", code] = codeBlock.match(
-      /```(\w+)?\n?([\s\S]*?)```/
-    );
+  let newMessage: string = message;
+  codeBlocks.forEach((codeBlock: string) => {
+    const [, language = "python", code] = codeBlock.match(/```(\w+)?\n?([\s\S]*?)```/) || [];
     const codeElement = `
       <div class="code-block">
         <div class="code-block-header">
@@ -82,48 +101,48 @@ function parseCodeMessage(message) {
   });
   return {
     message: newMessage,
-    codeBlocks: codeBlocks,
+    codeBlocks,
   };
 }
 
 // Function to parse the Markdown tables in the message
-function markdownToHtmlTable(markdown) {
-    const tableRegex = /((\|.*\|)(?:<br>|\n)*)+/gm;
-    const matches = [...markdown.matchAll(tableRegex)];
+function markdownToHtmlTable(markdown: string): string {
+  const tableRegex: RegExp = /((\|.*\|)(?:<br>|\n)*)+/gm;
+  const matches: RegExpMatchArray[] = [...markdown.matchAll(tableRegex)];
 
-    if (!matches.length) return markdown;
+  if (!matches.length) return markdown;
 
-    let result = markdown;
-    matches.forEach((match) => {
-        const rows = match[0].split(/<br>\s*|\n/).filter(row => row.trim() !== '' && !/^(\|?\s*-+\s*\|)+$/.test(row.trim()));
-        let htmlTable = '<table>';
+  let result = markdown;
+  matches.forEach((match: RegExpMatchArray) => {
+    const rows: string[] = match[0].split(/<br>\s*|\n/).filter(row => row.trim() !== '' && !/^(\|?\s*-+\s*\|)+$/.test(row.trim()));
+    let htmlTable: string = '<table>';
 
-        // Header row
-        htmlTable += '<tr>';
-        const headerRowData = rows[0].split('|').filter((item) => item.trim() !== '');
-        headerRowData.forEach((cell) => {
-            htmlTable += `<th>${cell.trim()}</th>`;
-        });
-        htmlTable += '</tr>';
-
-        // Data rows
-        for (let i = 1; i < rows.length; i++) {
-            const rowData = rows[i].split('|').filter((item) => item.trim() !== '');
-
-            let htmlRow = '<tr>';
-            rowData.forEach((cell) => {
-                htmlRow += `<td>${cell.trim()}</td>`;
-            });
-            htmlRow += '</tr>';
-
-            htmlTable += htmlRow;
-        }
-
-        htmlTable += '</table>';
-        result = result.replace(match[0], htmlTable);
+    // Header row
+    htmlTable += '<tr>';
+    const headerRowData: string[] = rows[0].split('|').filter((item: string) => item.trim() !== '');
+    headerRowData.forEach((cell: string) => {
+      htmlTable += `<th>${cell.trim()}</th>`;
     });
+    htmlTable += '</tr>';
 
-    return result;
+    // Data rows
+    for (let i = 1; i < rows.length; i++) {
+      const rowData: string[] = rows[i].split('|').filter((item: string) => item.trim() !== '');
+
+      let htmlRow: string = '<tr>';
+      rowData.forEach((cell: string) => {
+        htmlRow += `<td>${cell.trim()}</td>`;
+      });
+      htmlRow += '</tr>';
+
+      htmlTable += htmlRow;
+    }
+
+    htmlTable += '</table>';
+    result = result.replace(match[0], htmlTable);
+  });
+
+  return result;
 }
 
 // Create a toggle button element for the chatbot
@@ -249,31 +268,52 @@ document.body.appendChild(chatContainer);
 
 // Function to toggle the visibility of the chatbot
 function toggleChatbot() {
-  if (chatContainer.style.display === "none") {
-    chatContainer.style.display = "flex";
-    toggleButton.innerText = "Close";
-  } else {
-    chatContainer.style.display = "none";
-    toggleButton.innerText = "Assistant";
+  const chatContainer: HTMLElement | null = document.getElementById("chat-container");
+  const toggleButton: HTMLButtonElement | null = document.querySelector(".toggle-button");
+
+  if (chatContainer && toggleButton) {
+    if (chatContainer.style.display === "none") {
+      chatContainer.style.display = "flex";
+      toggleButton.innerText = "Close";
+    } else {
+      chatContainer.style.display = "none";
+      toggleButton.innerText = "Assistant";
+    }  
   }
 }
 
 // Handle click event on the copy buttons
-function addCopyButtonsListener() {
-  const copyButtons = document.querySelectorAll(".copy-button");
+function addCopyButtonsListener(): void {
+  const copyButtons: NodeListOf<HTMLElement> = document.querySelectorAll(".copy-button");
+
   copyButtons.forEach((button) => {
     button.addEventListener("click", (event) => {
-      const codeBlock = event.target.closest(".code-block");
-      const code = codeBlock.querySelector("pre").innerText;
-      navigator.clipboard.writeText(code);
-      button.textContent = "Copied!";
-      setTimeout(() => {
-        button.textContent = "Copy";
-      }, 3000);
+      const codeBlock = event.target as Element;
+      const preCode = codeBlock.querySelector("pre");
+      if (preCode) {
+        const code: string = preCode.innerText;
+        navigator.clipboard.writeText(code);
+        button.textContent = "Copied!";
+        setTimeout(() => {
+          button.textContent = "Copy";
+        }, 3000);
+      }
     });
   });
 }
 
+// Function to add a message to the chat interface
+function addMessage(message: string, isUserMessage: boolean, imageUrl?: string): void {
+  const messagesContainer: HTMLElement | null = document.getElementById("messages-container");
+  const style: string = sessionStorage.getItem('style') || "";
+
+  if (messagesContainer) {
+    const messageElement: HTMLDivElement = document.createElement("div");
+    messageElement.classList.add("chat-message");
+
+    addCopyButtonsListener();
+  }
+}
 // Function to add a message to the chat interface
 function addMessage(message, isUserMessage, imageUrl) {
   const messageElement = document.createElement("div");
@@ -301,33 +341,27 @@ function addMessage(message, isUserMessage, imageUrl) {
 
   // Create a div for the message content
   const textElement = document.createElement("div");
-  if (isUserMessage) {
-    textElement.classList.add("user-message");
-    if (style === "business") {
-      textElement.classList.add("user-message-content-business");
-    } else if (style === "education") {
-      textElement.classList.add("user-message-content-education");
-    } else if (style === "fitness") {
-      textElement.classList.add("user-message-content-fitness");
-    } else if (style === "personal") {
-      textElement.classList.add("user-message-content-personal");
+
+  enum UserStyle {
+    Business = "business",
+    Education = "education",
+    Fitness = "fitness",
+    Personal = "personal"
+  }
+  
+  function addStyleToElement(isUserMessage: boolean, style: UserStyle, textElement: HTMLElement): void {
+    const role = isUserMessage ? 'user' : 'bot';
+    textElement.classList.add(role + "-message");
+  
+    if (Object.values(UserStyle).includes(style)) {
+      textElement.classList.add(`${role}-message-content-${style}`);
     } else {
-      textElement.classList.add("user-message-content");
-    }
-  } else {
-    textElement.classList.add("bot-message");
-    if (style === "business") {
-      textElement.classList.add("bot-message-content-business");
-    } else if (style === "education") {
-      textElement.classList.add("bot-message-content-education");
-    } else if (style === "fitness") {
-      textElement.classList.add("bot-message-content-fitness");
-    } else if (style === "personal") {
-      textElement.classList.add("bot-message-content-personal");
-    } else {
-      textElement.classList.add("bot-message-content");
+      textElement.classList.add(`${role}-message-content`);
     }
   }
+
+  addStyleToElement(isUserMessage);
+
   let parsedMessage;
   if (isUserMessage) {
     parsedMessage = parseCodeMessage(stripScripts(message)).message;
